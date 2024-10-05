@@ -16,10 +16,10 @@ def jumbotron():
     return html.Div(
         dbc.Container(
             [
-                html.H2("Data insights with Dash and OpenAI", className="display-4"),
+                html.H2("NASA OSR Data visualisation", className="display-4"),
                 dcc.Markdown(
                     "This application uses [Dash Chart Editor](https://github.com/BSd3v/dash-chart-editor)"
-                    " as an interface to explore a dataset and OpenAI's API to interact in real-time with "
+                    " as an interface to explore a dataset and Llama 3.2 to interact in real-time with "
                     "a dataset by asking questions about its contents.",
                     className="lead",
                 ),
