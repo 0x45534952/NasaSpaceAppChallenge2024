@@ -7,6 +7,9 @@ import dash_mantine_components as dmc
 import pandas as pd
 from dash import Input, Output, State, callback, dcc, html
 
+import ollama
+from constants import ollama_model
+
 
 def chat_container(text, type_):
     return html.Div(text, id="chat-item", className=type_)
@@ -17,42 +20,41 @@ def jumbotron():
         dbc.Container(
             [
                 html.H2("NASA OSR Data visualisation", className="display-4"),
-                dcc.Markdown(
-                    "This application uses [Dash Chart Editor](https://github.com/BSd3v/dash-chart-editor)"
-                    " as an interface to explore a dataset and Llama 3.2 to interact in real-time with "
-                    "a dataset by asking questions about its contents.",
-                    className="lead",
-                ),
-                html.Hr(className="my-2"),
-                html.P(
-                    "Start using the application by interacting with the sample dataset, or upload your own."
-                ),
-                html.P(
-                    [
-                        dbc.Button(
-                            "Learn more",
-                            style={"background-color": "#238BE6"},
-                            href="https://plotly.com/examples/generative-ai-chatgpt/",
-                        ),
-                        dbc.Button(
-                            "Upload your own CSV",
-                            id="modal-demo-button",
-                            style={
-                                "background-color": "#238BE6",
-                                "margin-left": "10px",
-                            },
-                        ),
-                    ],
-                    className="lead",
-                    style={"display": "flex"},
-                ),
+                # dcc.Markdown(
+                #     "This application uses [Dash Chart Editor](https://github.com/BSd3v/dash-chart-editor)"
+                #     " as an interface to explore a dataset and Llama 3.2 to interact in real-time with "
+                #     "a dataset by asking questions about its contents.",
+                #     className="lead",
+                # ),
+                # html.Hr(className="my-2"),
+                # html.P(
+                #     "Start using the application by interacting with the sample dataset, or upload your own."
+                # ),
+                # html.P(
+                #     [
+                #         dbc.Button(
+                #             "Learn more",
+                #             style={"background-color": "#238BE6"},
+                #             href="https://plotly.com/examples/generative-ai-chatgpt/",
+                #         ),
+                #         dbc.Button(
+                #             "Upload your own CSV",
+                #             id="modal-demo-button",
+                #             style={
+                #                 "background-color": "#238BE6",
+                #                 "margin-left": "10px",
+                #             },
+                #         ),
+                #     ],
+                #     className="lead",
+                #     style={"display": "flex"},
+                # ),
             ],
             fluid=True,
             className="py-3",
         ),
         className="p-3 bg-light rounded-3",
     )
-
 
 def upload_modal():
     return html.Div(
@@ -194,3 +196,138 @@ def modal_demo(nc1, nc2, opened):
 @callback(Output("chat-submit", "disabled"), Input("question", "value"))
 def disable_submit(question):
     return not bool(question)
+
+def most_interesting_plot(df):
+    # Generate insights
+    insights = []
+
+    # Basic DataFrame Information
+    insights.append(
+        f"The DataFrame contains {len(df)} rows and {len(df.columns)} columns."
+    )
+    insights.append("Here are the first 5 rows of the DataFrame:\n")
+    insights.append(df.head().to_string(index=False))
+
+    # Summary Statistics
+    insights.append("\nSummary Statistics:")
+    insights.append(df.describe().to_string())
+
+    # Column Information
+    insights.append("\nColumn Information:")
+    for col in df.columns:
+        insights.append(f"- Column '{col}' has {df[col].nunique()} unique values.")
+
+    # Missing Values
+    missing_values = df.isnull().sum()
+    insights.append("\nMissing Values:")
+    for col, count in missing_values.items():
+        if count > 0:
+            insights.append(f"- Column '{col}' has {count} missing values.")
+
+    # Most Common Values in Categorical Columns
+    categorical_columns = df.select_dtypes(include=["object"]).columns
+    for col in categorical_columns:
+        top_value = df[col].mode().iloc[0]
+        insights.append(f"\nMost common value in '{col}' column: {top_value}")
+
+    insights_text = "\n".join(insights)
+
+    # Compliment and Prompt
+    prompt = (
+        "You are a data analyst and chart design expert helping users build charts and answer "
+        "questions about arbitrary datasets. You are using Dash Chart Editor, a product built "
+        "by Plotly. Your task is to create the best possible plot using the provided insights "
+        "and the actual data from the dataset. Ensure that the plot is meaningful and accurately "
+        "represents the data. Be sure to include the data and labels. "
+        "Your response should ONLY include the Dash layout of the plot, "
+        "not in a variable. Do not put it in a code block nor Markdown. Only answer "
+        "'html.Div(id='generated-plot', [...])'."
+        "Here is an example of a Dash layout:\n\n"
+        """
+        html.Div(id='generated-plot', children=[
+            dcc.Graph(
+                figure={
+                    'data': [
+                        {'x': df['column1'], 'y': df['column2'], 'type': 'bar',
+                        'name': 'Example Bar Plot'},
+                        {'x': df['column3'], 'y': df['column4'], 'type': 'line',
+                        'name': 'Example Line Plot'}
+                    ],
+                    'layout': {
+                        'title': {'text': 'Example Plot Title'},
+                        'xaxis': {'title': {'text': 'X Axis Title'}, 'type': 'category'},
+                        'yaxis': {'title': {'text': 'Y Axis Title'}, 'type': 'linear'},
+                        'legend': {'orientation': 'h'}
+                    }
+                }
+            )
+        ])
+        """
+    )
+
+    prompt = f"{prompt}\n\nContext:\n\n{insights_text}"
+
+    response = ollama.chat(
+        model=ollama_model, messages=[{"role": "user", "content": prompt}]
+    )
+
+    code = response["message"]["content"]
+
+    print(code)
+
+    return """layout = dmc.MantineProvider(
+    [
+        dmc.Paper(
+            ["""+code+""",
+                html.Div(
+                    [
+                        html.P("Ask about the dataset...", className="lead"),
+                        dmc.Textarea(
+                            placeholder=random.choice(
+                                [
+                                    '"Are there any outliers in this dataset?"',
+                                    '"What trends do you see in this dataset?"',
+                                    '"Anything stand out about this dataset?"',
+                                    '"Do you recommend specific charts given this dataset?"',
+                                    '"What columns should I investigate further?"',
+                                ]
+                            ),
+                            autosize=True,
+                            minRows=2,
+                            id="question",
+                        ),
+                        dmc.Group(
+                            [
+                                dmc.Button(
+                                    "Submit",
+                                    id="chat-submit",
+                                    disabled=True,
+                                ),
+                            ],
+                            # position="right",
+                        ),
+                        html.Div(
+                        [
+                            dmc.LoadingOverlay(
+                                id="loading-overlay",
+                                visible=False,
+                                overlayProps={"radius" : "sm", "blur" : 2},
+                                zIndex=10,
+                            ),
+                            html.Div(
+                                id="chat-output",
+                            ),
+                        ],
+                        ),
+                    ],
+                    id="chat-container",
+                ),
+            ],
+            shadow="xs",
+            id="flex",
+        ),
+        utils.upload_modal(),
+        html.Div(id="current-charts"),
+    ],
+    id="padded",
+)"""

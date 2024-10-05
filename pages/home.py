@@ -15,7 +15,11 @@ df = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/solar
 
 register_page(__name__, path="/")
 
-layout = html.Div(
+try:
+    exec(utils.most_interesting_plot(df))
+
+except Exception as e:
+    layout = dmc.MantineProvider(
     [
         dmc.Paper(
             [
@@ -62,9 +66,13 @@ layout = html.Div(
                         [
                             dmc.LoadingOverlay(
                                 id="loading-overlay",
+                                visible=False,
+                                overlayProps={"radius" : "sm", "blur" : 2},
+                                zIndex=10,
                             ),
                             html.Div(
                                 id="chat-output",
+                                children=[]
                             ),
                         ],
                         ),
@@ -85,16 +93,19 @@ layout = html.Div(
 @callback(
     Output("chat-output", "children"),
     Output("question", "value"),
-    Output("loading-overlay", "visible", True),
+    Output("loading-overlay", "visible"),
     Input("chat-submit", "n_clicks"),
-    State("chart-editor", "dataSources"),
     State("question", "value"),
     State("chat-output", "children"),
     prevent_initial_call=True,
-)
-def chat_window(n_clicks, data, question, cur):
+    )
+def chat_window(n_clicks, question, cur):
     if not question:
         return no_update, no_update, False
+
+    global df
+
+    data = df.to_dict("list")
 
     df = pd.DataFrame(data)
     prompt = utils.generate_prompt(df, question)
@@ -111,6 +122,7 @@ def chat_window(n_clicks, data, question, cur):
     answer_markdown = dcc.Markdown(answer, className="chat-item answer")
 
     new_content = [question_markdown, answer_markdown]
+
 
     return (new_content + cur if cur else new_content), "", False
 

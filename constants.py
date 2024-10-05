@@ -8,4 +8,4 @@ redis_instance = redis.StrictRedis.from_url(
 
 ollama_port = "11434"
 ollama_url = "127.0.0.1:11434"
-ollama_model = "llama3.2"
+ollama_model = "llama3.1"
