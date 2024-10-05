@@ -124,5 +124,4 @@ dmypy.json
 cython_debug/
 
 # Plotly Dash
-assets/
 *.dash

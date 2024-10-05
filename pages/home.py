@@ -58,12 +58,15 @@ layout = html.Div(
                             ],
                             # position="right",
                         ),
-                        dmc.LoadingOverlay(
-                            [
+                        html.Div(
+                        [
+                            dmc.LoadingOverlay(
+                                id="loading-overlay",
+                            ),
                             html.Div(
                                 id="chat-output",
                             ),
-                           ],
+                        ],
                         ),
                     ],
                     id="chat-container",
@@ -82,6 +85,7 @@ layout = html.Div(
 @callback(
     Output("chat-output", "children"),
     Output("question", "value"),
+    Output("loading-overlay", "visible", True),
     Input("chat-submit", "n_clicks"),
     State("chart-editor", "dataSources"),
     State("question", "value"),
@@ -89,22 +93,26 @@ layout = html.Div(
     prevent_initial_call=True,
 )
 def chat_window(n_clicks, data, question, cur):
-    df = pd.DataFrame(data)
+    if not question:
+        return no_update, no_update, False
 
+    df = pd.DataFrame(data)
     prompt = utils.generate_prompt(df, question)
 
-    completion = ollama.chat(
-        model=ollama_model, messages=[{"role": "user", "content": prompt}]
-    )
+    try:
+        completion = ollama.chat(
+            model=ollama_model, messages=[{"role": "user", "content": prompt}]
+        )
+        answer = completion["message"]["content"]
+    except Exception as e:
+        answer = f"Error: {str(e)}"
 
-    question = [
-        dcc.Markdown(
-            completion.choices[0].message.content, className="chat-item answer"
-        ),
-        dcc.Markdown(question, className="chat-item question"),
-    ]
+    question_markdown = dcc.Markdown(question, className="chat-item question")
+    answer_markdown = dcc.Markdown(answer, className="chat-item answer")
 
-    return (question + cur if cur else question), None
+    new_content = [question_markdown, answer_markdown]
+
+    return (new_content + cur if cur else new_content), "", False
 
 
 @callback(
