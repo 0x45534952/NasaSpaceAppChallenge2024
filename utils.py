@@ -6,10 +6,25 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
 from dash import Input, Output, State, callback, dcc, html
-
+import plotly.express as px
+import random
+from urllib.parse import parse_qs
 import ollama
 from constants import ollama_model
+import os
+JSON_FILE_PATH = os.getenv('DATA_JSON_PATH', 'data/data.json')  # Use environment variable for the JSON file path
+import json
+import logging
 
+logging.basicConfig(level=logging.INFO)
+class Data:
+    def __init__(self):
+        self.df = pd.read_csv("data/default.csv")
+        self.DEFAULT_CSV_PATH = "data/default.csv"
+
+    def update(self, df):
+        self.df = df
+data = Data()
 
 def chat_container(text, type_):
     return html.Div(text, id="chat-item", className=type_)
@@ -19,7 +34,7 @@ def jumbotron():
     return html.Div(
         dbc.Container(
             [
-                html.H2("NASA OSR Data visualisation", className="display-4"),
+                html.H2("NASA OSD Data visualisation", className="display-4"),
                 # dcc.Markdown(
                 #     "This application uses [Dash Chart Editor](https://github.com/BSd3v/dash-chart-editor)"
                 #     " as an interface to explore a dataset and Llama 3.2 to interact in real-time with "
@@ -157,7 +172,7 @@ def generate_prompt(df, question):
 
 
 @callback(
-    Output("chart-editor", "dataSources"),
+    Output("chart-editor", "dataSources", True),
     Output("summary", "children"),
     Input("upload-data", "contents"),
     State("upload-data", "filename"),
@@ -167,6 +182,7 @@ def update_output(contents, filename):
     content_type, content_string = contents.split(",")
     decoded = base64.b64decode(content_string)
     df = pd.read_csv(io.StringIO(decoded.decode("utf-8")))
+    data.update(df)
 
     preview = html.Div(
         [
@@ -178,6 +194,7 @@ def update_output(contents, filename):
             ),
         ]
     )
+
 
     return df.to_dict("list"), preview
 
@@ -192,8 +209,8 @@ def update_output(contents, filename):
 def modal_demo(nc1, nc2, opened):
     return not opened
 
-
 @callback(Output("chat-submit", "disabled"), Input("question", "value"))
+
 def disable_submit(question):
     return not bool(question)
 
@@ -241,7 +258,7 @@ def most_interesting_plot(df):
         "represents the data. Be sure to include the data and labels. "
         "Your response should ONLY include the Dash layout of the plot, "
         "not in a variable. Do not put it in a code block nor Markdown. Only answer "
-        "'html.Div(id='generated-plot', [...])'."
+        "'html.Div(id='generated-plot', [...])'. Keep it simple and concise."
         "Here is an example of a Dash layout:\n\n"
         """
         html.Div(id='generated-plot', children=[
@@ -273,14 +290,30 @@ def most_interesting_plot(df):
 
     code = response["message"]["content"]
 
-    print(code)
+    # print(code)
 
-    return """layout = dmc.MantineProvider(
+    part1 = """dmc.MantineProvider(
     [
+        html.P(
+            [
+                dbc.Button(
+                    "Upload your own CSV",
+                    id="modal-demo-button",
+                    style={
+                        "background-color": "#238BE6",
+                        "margin-left": "10px",
+                    },
+                ),
+            ],
+            className="lead",
+            style={"display": "flex"},
+        ),
         dmc.Paper(
-            ["""+code+""",
+            ["""
+    part2 = """,
                 html.Div(
                     [
+                        dcc.Location(id="url", refresh=False),
                         html.P("Ask about the dataset...", className="lead"),
                         dmc.Textarea(
                             placeholder=random.choice(
@@ -308,12 +341,7 @@ def most_interesting_plot(df):
                         ),
                         html.Div(
                         [
-                            dmc.LoadingOverlay(
-                                id="loading-overlay",
-                                visible=False,
-                                overlayProps={"radius" : "sm", "blur" : 2},
-                                zIndex=10,
-                            ),
+                            loading_overlay,
                             html.Div(
                                 id="chat-output",
                             ),
@@ -331,3 +359,92 @@ def most_interesting_plot(df):
     ],
     id="padded",
 )"""
+
+
+    
+    default_code = """html.Div(
+                    [
+                        dce.DashChartEditor(
+                            id="chart-editor",
+                            dataSources=df.to_dict("list"),
+                        ),
+                        dmc.Affix(
+                            dmc.Button("Save this chart", id="add-to-layout"),
+                            position={"bottom": 20, "left": 20},
+                        ),
+                    ],
+                )"""
+    
+    return code, default_code, part1, part2
+
+
+###         create_body_weight_chart(merged_df_665),
+###        create_rrna_contamination_chart_665(merged_rna_df_665),
+###        create_habitat_chart(merged_df_665),
+
+
+df_665 = pd.read_csv("data/OSD-665_metadata_OSD-665-ISA/OSD-665-assays.csv")
+samples_665 = pd.read_csv("data/OSD-665_metadata_OSD-665-ISA/OSD-665-samples.csv")
+
+merged_df_665 = pd.merge(df_665, samples_665, on='Sample Name')
+
+merged_df_665['Parameter Value: Body Weight upon Euthanasia'] = pd.to_numeric(
+    merged_df_665['Parameter Value: Body Weight upon Euthanasia'].str.replace('gram', '').str.strip(),
+    errors='coerce'
+)
+
+# Create a boxplot for 'Body Weight upon Euthanasia' by 'Spaceflight' condition
+def create_body_weight_chart(merged_df):
+    fig = px.box(
+        merged_df,
+        x='Factor Value: Spaceflight',
+        y='Parameter Value: Body Weight upon Euthanasia',
+        color='Factor Value: Spaceflight',  # Color by spaceflight condition
+        title='Body Weight upon Euthanasia across Spaceflight Conditions',
+        labels={
+            'Parameter Value: Body Weight upon Euthanasia': 'Body Weight (grams)',
+            'Factor Value: Spaceflight': 'Spaceflight Condition'
+        },
+    )
+    return dcc.Graph(figure=fig)
+
+
+df_665['Parameter Value: rRNA Contamination'] = str(df_665['Parameter Value: rRNA Contamination']).replace('percent', '').strip()
+
+# Convert the remaining numeric part to float
+df_665['Parameter Value: rRNA Contamination'] = pd.to_numeric(df_665['Parameter Value: rRNA Contamination'], errors='coerce')
+
+# Filter out any invalid or zero values
+df_rrna_665 = df_665[df_665['Parameter Value: rRNA Contamination'] > 0]
+merged_rna_df_665 = pd.merge(df_rrna_665, samples_665, on='Sample Name')
+
+def create_rrna_contamination_chart_665(merged_df):
+    
+    fig = px.scatter(
+        merged_df,
+        x='Factor Value: Spaceflight',
+        y='Parameter Value: rRNA Contamination',
+        title='rRNA Contamination Levels across Samples',
+        labels={
+            'Factor Value: Spaceflight': 'Spaceflight Condition',
+            'Parameter Value: rRNA Contamination': 'rRNA Contamination (%)',
+        },
+        size='Parameter Value: rRNA Contamination',
+        color='Parameter Value: rRNA Contamination'
+    )
+    
+    return dcc.Graph(figure=fig)
+
+# Create a histogram for 'Habitat' by 'Spaceflight' condition
+def create_habitat_chart(merged_df):
+    fig = px.histogram(
+        merged_df,
+        x='Parameter Value: habitat',
+        color='Factor Value: Spaceflight',
+        title='Habitat Distribution by Spaceflight Condition',
+        labels={
+            'Parameter Value: habitat': 'Habitat',
+            'Factor Value: Spaceflight': 'Spaceflight Condition'
+        },
+    )
+    return dcc.Graph(figure=fig)

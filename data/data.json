@@ -1,0 +1,62 @@
+{
+    "Experiment OSD-665": {
+        "value": "OSD-665",
+        "experiment_name": "Rodent Research-23 (RR-23)",
+        "experiment_overview": "The RR-23 mission aimed to investigate the effects of spaceflight on eye health by studying changes in blood vessels within the eyes of mice. Twenty mice were sent to the International Space Station for 38 days, where they experienced microgravity conditions.",
+        "goals": [
+            "To understand how spaceflight affects the structure and function of arteries, veins, and lymphatic vessels essential for vision",
+            "To compare these effects with those observed in ground control groups",
+            "To collect data that could lead to new insights into human eye health and potential treatments"
+        ],
+        "significance": "This experiment is crucial for advancing our understanding of how space travel affects the human body, particularly in relation to eye health. The findings could have significant implications for future long-duration missions to space.",
+        "protocol": [
+            {
+                "name": "Pre-Flight Preparation",
+                "description": "Twenty mice were selected and prepared for spaceflight by being transported to the International Space Station on SpaceX-21."
+            },
+            {
+                "name": "Spaceflight and Post-Splashdown Procedures",
+                "description": "The mice remained in microgravity conditions on the ISS for 38 days. After splashdown, they were transported to Texas A&M University where post-flight procedures were conducted before euthanasia and tissue collection."
+            },
+            {
+                "name": "Tissue Collection and Analysis",
+                "description": "Samples from the flight, habitat ground control, and vivarium ground control groups underwent RNA extraction, library generation, and sequencing. This provided a comprehensive dataset for analyzing changes in eye-related blood vessels."
+            }
+        ],
+        "csv_path": "data/OSD-665_metadata_OSD-665-ISA/OSD-665-assays.csv"
+    },
+    "Experiment OSD-379": {
+        "value": "OSD-379",
+        "experiment_name": "Rodent Research Reference Mission (RRRM-1)",
+        "experiment_overview": "In this groundbreaking experiment, forty female mice were flown on the International Space Station to study how space travel affects aging. By comparing 10-12 week-old and 32 week-old mice, researchers aimed to identify differences in outcomes due to age and spaceflight.",
+        "goals": [
+            "To assess how space travel impacts aging in rodents",
+            "To determine if there are significant differences between young and old mice in response to spaceflight",
+            "To gather valuable data on the effects of space travel on various biological processes"
+        ],
+        "significance": "This experiment has the potential to significantly advance our understanding of aging and its relationship with space travel. The findings could lead to breakthroughs in fields such as human health, medicine, and space exploration.",
+        "protocol": [
+            {
+                "name": "On-Orbit Sacrifice",
+                "description": "Half of the 10-12 week-old and 32 week-old mice were sacrificed on the International Space Station after 22-23 days to directly assess spaceflight effects."
+            },
+            {
+                "name": "Live Animal Return (LAR)",
+                "description": "The other half of the young and old mice were returned live to Earth, allowed to recover for 2 days, and then sacrificed. This was done to compare with on-orbit sacrifice results."
+            },
+            {
+                "name": "Independent Ground Controls",
+                "description": "Mice housed in flight hardware under matched environmental conditions served as independent ground controls."
+            },
+            {
+                "name": "Basal Controls",
+                "description": "Mice sacrificed 1 day after launch were used as basal controls, providing a baseline for comparison with other groups."
+            },
+            {
+                "name": "Vivarium Controls",
+                "description": "Standard vivarium habitats housed mice that served as control animals for the experiment."
+            }
+        ],
+        "csv_path": "data/OSD-379_metadata_OSD-379-ISA/OSD-379-assays.csv"
+    }
+}

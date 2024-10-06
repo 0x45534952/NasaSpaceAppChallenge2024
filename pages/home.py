@@ -1,175 +1,82 @@
-import random
+import dash_bootstrap_components as dbc
+from dash import dcc, html, register_page, Input, Output, callback, State
+import urllib.parse
+import json
 
-import dash_chart_editor as dce
-import dash_mantine_components as dmc
-import ollama
-import pandas as pd
-from dash import Input, Output, State, callback, dcc, html, no_update, register_page
+# Load json data from data folder (data.json)
+experiments = json.load(open("data/data.json"))
 
-import utils
-
-from constants import ollama_model
-
-df = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/solar.csv")
-
-
+# Register the page
 register_page(__name__, path="/")
 
-try:
-    exec(utils.most_interesting_plot(df))
+# Prepare dropdown options from experiments data
+experiment_options = [{"label": exp, "value": experiments[exp]["value"]} for exp in experiments]
 
-except Exception as e:
-    layout = dmc.MantineProvider(
-    [
-        dmc.Paper(
-            [
-                html.Div(
-                    [
-                        dce.DashChartEditor(
-                            id="chart-editor",
-                            dataSources=df.to_dict("list"),
-                        ),
-                        dmc.Affix(
-                            dmc.Button("Save this chart", id="add-to-layout"),
-                            # position={"bottom": 20, "left": 20},
-                        ),
-                    ],
-                ),
-                html.Div(
-                    [
-                        html.P("Ask about the dataset...", className="lead"),
-                        dmc.Textarea(
-                            placeholder=random.choice(
-                                [
-                                    '"Are there any outliers in this dataset?"',
-                                    '"What trends do you see in this dataset?"',
-                                    '"Anything stand out about this dataset?"',
-                                    '"Do you recommend specific charts given this dataset?"',
-                                    '"What columns should I investigate further?"',
-                                ]
-                            ),
-                            autosize=True,
-                            minRows=2,
-                            id="question",
-                        ),
-                        dmc.Group(
-                            [
-                                dmc.Button(
-                                    "Submit",
-                                    id="chat-submit",
-                                    disabled=True,
-                                ),
-                            ],
-                            # position="right",
-                        ),
-                        html.Div(
-                        [
-                            dmc.LoadingOverlay(
-                                id="loading-overlay",
-                                visible=False,
-                                overlayProps={"radius" : "sm", "blur" : 2},
-                                zIndex=10,
-                            ),
-                            html.Div(
-                                id="chat-output",
-                                children=[]
-                            ),
-                        ],
-                        ),
-                    ],
-                    id="chat-container",
-                ),
-            ],
-            shadow="xs",
-            id="flex",
-        ),
-        utils.upload_modal(),
-        html.Div(id="current-charts"),
-    ],
-    id="padded",
-)
+# Define the layout with production-ready design for web and mobile
+layout = html.Div([
+    dbc.Container([
+        dbc.Row([
+            dbc.Col([
+                # Header with clean typography and responsive font size
+                html.H1("Nasa Space App Challenge 2024", 
+                        className="text-center mb-3", 
+                        style={"font-weight": "bold", 
+                               "font-size": "calc(1.5rem + 1vw)",  # Responsive font size
+                               "color": "#2c3e50"}),
 
+                # Subheader with responsive font and subtle color
+                html.P("A Minimalist App for Scientists", 
+                       className="text-center mb-4", 
+                       style={"font-size": "calc(0.75rem + 0.5vw)",  # Responsive font size
+                              "color": "#7f8c8d"}),
 
+                # Dropdown for selecting experiments, responsive width
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label("Select an Experiment", 
+                                  html_for='experiment-dropdown', 
+                                  style={"font-weight": "bold", 
+                                         "color": "#34495e"}),
+                        dcc.Dropdown(
+                            id='experiment-dropdown',
+                            options=experiment_options,
+                            placeholder="Choose an experiment",
+                            style={"border": "1px solid #bdc3c7", 
+                                   "border-radius": "5px", 
+                                   "font-size": "16px"}  # Ensure legibility
+                        )
+                    ], xs=12, sm=10, md=8, lg=6, xl=6, className="mx-auto")  # Responsive centering
+                ], className="mb-4"),
+
+                # Button for navigation, centered and responsive size
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Button("Go to Summary", 
+                                   id='summary-btn', 
+                                   style={"background-color": "#0B3D91",  # Custom color
+                                          "border-color": "#0B3D91",    # Ensure border matches
+                                          "color": "#fff",              # White text
+                                          "width": "100%", 
+                                          "font-size": "18px", 
+                                          "padding": "10px"})
+                    ], xs=12, sm=8, md=6, lg=4, xl=4, className="mx-auto")  # Center the button
+                ], className="mb-4"),
+
+                # Hidden div to trigger page navigation
+                dcc.Location(id='url', refresh=True)
+            ], width=12)
+        ])
+    ], fluid=True, style={"max-width": "100%", "padding": "30px 15px"})  # Responsive padding for mobile
+])
+
+# Callback for button click and navigation
 @callback(
-    Output("chat-output", "children"),
-    Output("question", "value"),
-    Output("loading-overlay", "visible"),
-    Input("chat-submit", "n_clicks"),
-    State("question", "value"),
-    State("chat-output", "children"),
-    prevent_initial_call=True,
-    )
-def chat_window(n_clicks, question, cur):
-    if not question:
-        return no_update, no_update, False
-
-    global df
-
-    data = df.to_dict("list")
-
-    df = pd.DataFrame(data)
-    prompt = utils.generate_prompt(df, question)
-
-    try:
-        completion = ollama.chat(
-            model=ollama_model, messages=[{"role": "user", "content": prompt}]
-        )
-        answer = completion["message"]["content"]
-    except Exception as e:
-        answer = f"Error: {str(e)}"
-
-    question_markdown = dcc.Markdown(question, className="chat-item question")
-    answer_markdown = dcc.Markdown(answer, className="chat-item answer")
-
-    new_content = [question_markdown, answer_markdown]
-
-
-    return (new_content + cur if cur else new_content), "", False
-
-
-@callback(
-    Output("chart-editor", "saveState"),
-    Input("add-to-layout", "n_clicks"),
-    prevent_initial_call=True,
+    Output('url', 'href'),
+    Input('summary-btn', 'n_clicks'),
+    State('experiment-dropdown', 'value')
 )
-def save_figure_to_chart_editor(n):
-    if n:
-        return True
-
-
-@callback(
-    Output("current-charts", "children"),
-    Input("chart-editor", "figure"),
-    State("chart-editor", "dataSources"),
-    State("current-charts", "children"),
-    prevent_initial_call=True,
-)
-def save_figure(figure, data, cur):
-    # cleaning data output for unnecessary columns
-    figure = dce.cleanDataFromFigure(
-        figure,
-    )
-    df = pd.DataFrame(data)
-    # create Figure object from dash-chart-editor figure
-    figure = dce.chartToPython(figure, df)
-
-    # Validate there's something to save
-    if figure.data:
-        item = [dmc.Paper([dcc.Graph(figure=figure)])]
-
-        header = [
-            html.Div(
-                [
-                    html.H2("Saved figures"),
-                    dcc.Clipboard(
-                        id="save-clip",
-                        title="Copy link",
-                        style={"margin-left": "10px"},
-                    ),
-                ],
-                style={"display": "flex"},
-            )
-        ]
-        return cur + item if cur else header + item
-
-    return no_update
+def navigate_to_summary(n_clicks, experiment_name):
+    if n_clicks > 0 and experiment_name:  # Ensure the button is clicked and experiment is selected
+        # Create the URL for redirection, encoding the experiment name as a query parameter
+        return f"/summary?id={urllib.parse.quote(experiment_name)}"
+    return None

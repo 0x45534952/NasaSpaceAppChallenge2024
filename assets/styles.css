@@ -49,16 +49,25 @@ body {
     width: 50%;
 }
 
+.btn {
+
+}
+
 .question {
-    color: black;
-    margin-right: 20px; /* Add 5px margin to the right of the question */
+    color: #333; /* Darker grey for better readability */
+    margin-right: 25px; /* Slightly increased margin for better spacing */
+    font-size: 16px; /* Standard font size */
+    line-height: 1.5; /* Improved line spacing */
 }
 
 .answer {
-    color: grey;
-    margin-left: 20px; /* Add 5px margin to the left of the answer */
+    color: #666; /* Medium grey for contrast */
+    margin-left: 25px; /* Slightly increased margin for better spacing */
+    font-size: 16px; /* Standard font size */
+    line-height: 1.5; /* Improved line spacing */
 }
 
 #loader {
-    height:15px
+    height: 15px;
+    width: 15px; /* Added width for consistency */
 }

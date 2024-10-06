@@ -3,7 +3,7 @@ import uuid
 
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-from dash import Dash, Input, Output, State, callback, page_container, _dash_renderer
+from dash import Dash, Input, dcc, Output, State, callback, page_container, _dash_renderer
 _dash_renderer._set_react_version("18.2.0")
 from flask import request
 
@@ -26,7 +26,8 @@ server = app.server
 def layout():
     return dmc.MantineProvider(
         [
-            utils.jumbotron(),
+            dcc.Location(id="url", refresh=False),
+            #utils.jumbotron(),
             page_container,
         ],
     )
@@ -48,4 +49,4 @@ def copy_link_to_view(n, current):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
